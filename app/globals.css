@@ -3,35 +3,90 @@
 @tailwind utilities;
 
 :root {
-  --font-inter: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* Hex tokens */
+  --color-paper: #F6F3EC;
+  --color-surface: #FFFFFF;
+  --color-surface-raised: #FBF9F4;
+  --color-ink-900: #16140F;
+  --color-ink-700: #3A362D;
+  --color-ink-500: #6B665A;
+  --color-ink-300: #B9B3A4;
+  --color-line: #E4DFD2;
+  --color-accent: #E8481C;
+  --color-accent-hover: #C93A12;
+  --color-accent-soft: #FDE9E1;
+  --color-success: #2F6B4F;
+  --color-success-soft: #E3F0E8;
+  --color-warning: #A8650B;
+  --color-warning-soft: #F8EBD2;
+  --color-danger: #A32626;
+  --color-danger-soft: #F7E0E0;
+
+  /* RGB triplets for Tailwind alpha modifiers */
+  --rgb-paper: 246 243 236;
+  --rgb-surface: 255 255 255;
+  --rgb-surface-raised: 251 249 244;
+  --rgb-ink-900: 22 20 15;
+  --rgb-ink-700: 58 54 45;
+  --rgb-ink-500: 107 102 90;
+  --rgb-ink-300: 185 179 164;
+  --rgb-line: 228 223 210;
+  --rgb-accent: 232 72 28;
+  --rgb-accent-hover: 201 58 18;
+  --rgb-accent-soft: 253 233 225;
+  --rgb-success: 47 107 79;
+  --rgb-success-soft: 227 240 232;
+  --rgb-warning: 168 101 11;
+  --rgb-warning-soft: 248 235 210;
+  --rgb-danger: 163 38 38;
+  --rgb-danger-soft: 247 224 224;
 }
 
+html,
 body {
-  font-family: var(--font-inter);
-  background-color: #F8FAFC;
-  color: #1E293B;
+  background-color: var(--color-paper);
+  color: var(--color-ink-900);
   margin: 0;
   padding: 0;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom soft scrollbar */
+/* Custom warm scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #F1F5F9;
+  background: var(--color-paper);
 }
 ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
+  background: var(--color-ink-300);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+  background: var(--color-ink-500);
 }
 
-/* Soft transition for interactive elements */
-button, a, input, select, textarea {
-  transition: all 0.15s ease-in-out;
+/* Editorial skeleton shimmer */
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-line) 0%,
+    var(--color-surface-raised) 50%,
+    var(--color-line) 100%
+  );
+  background-size: 200% 100%;
+}
+
+/* Respect reduced motion globally */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

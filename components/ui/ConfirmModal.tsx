@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Modal } from "./Modal";
+import { Button } from "./Button";
 
 type ConfirmModalProps = {
   isOpen: boolean;
@@ -29,29 +30,25 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} maxWidth="sm">
       <div className="space-y-6">
-        <p className="text-sm text-slate-600 leading-relaxed">{message}</p>
+        <p className="text-body text-ink-700 leading-relaxed">{message}</p>
 
-        <div className="flex justify-end gap-2.5 pt-4 border-t border-slate-100">
-          <button
-            type="button"
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-2.5 pt-4 border-t border-line">
+          <Button
+            variant="secondary"
+            size="md"
             onClick={onClose}
             disabled={isLoading}
-            className="px-4 py-2 text-xs font-semibold rounded-[8px] border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
           >
             {cancelLabel}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant={isDestructive ? "danger" : "primary"}
+            size="md"
             onClick={onConfirm}
-            disabled={isLoading}
-            className={`px-4 py-2 text-xs font-semibold rounded-[8px] text-white transition-colors disabled:opacity-50 ${
-              isDestructive
-                ? "bg-rose-600 hover:bg-rose-700 shadow-sm"
-                : "bg-blue-600 hover:bg-blue-700 shadow-sm"
-            }`}
+            loading={isLoading}
           >
-            {isLoading ? "Memproses..." : confirmLabel}
-          </button>
+            {confirmLabel}
+          </Button>
         </div>
       </div>
     </Modal>

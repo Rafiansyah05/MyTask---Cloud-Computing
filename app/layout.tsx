@@ -1,17 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
+import { Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { ToastProvider } from "@/components/ui/Toast";
 
-const instrumentSerif = Instrument_Serif({
-  weight: "400",
-  style: ["normal", "italic"],
-  subsets: ["latin"],
-  variable: "--font-serif",
-  display: "swap",
-});
-
-const geist = Geist({
+const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-sans",
   display: "swap",
@@ -28,9 +21,9 @@ export const metadata: Metadata = {
   description:
     "Aplikasi web mahasiswa untuk mengelola mata kuliah, tugas perkuliahan, subtugas, tenggat waktu, dan progres.",
   icons: {
-    icon: "/icon.png",
-    shortcut: "/icon.png",
-    apple: "/icon.png",
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+    apple: "/favicon.svg",
   },
 };
 
@@ -42,10 +35,12 @@ export default function RootLayout({
   return (
     <html
       lang="id"
-      className={`${instrumentSerif.variable} ${geist.variable} ${geistMono.variable}`}
+      className={`${plusJakarta.variable} ${geistMono.variable}`}
     >
       <body className="font-sans text-body bg-paper text-ink-900 antialiased min-h-screen">
-        <AppLayout>{children}</AppLayout>
+        <ToastProvider>
+          <AppLayout>{children}</AppLayout>
+        </ToastProvider>
       </body>
     </html>
   );

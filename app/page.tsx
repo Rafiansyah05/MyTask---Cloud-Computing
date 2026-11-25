@@ -2,18 +2,20 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { Search, Plus, Calendar, ArrowRight, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { DashboardSummary } from "@/types";
-import { Badge } from "@/components/ui/Badge";
-import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Alert } from "@/components/ui/Alert";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { StatCard } from "@/components/ui/StatCard";
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"active" | "all" | "deadlines">("active");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const fetchDashboard = async () => {
     try {
@@ -42,7 +44,7 @@ export default function DashboardPage() {
         <Alert type="error" title="Gagal Memuat" message={error} />
         <button
           onClick={fetchDashboard}
-          className="px-4 py-2 rounded-[8px] bg-blue-600 text-white font-medium text-xs hover:bg-blue-700 transition-all"
+          className="px-4 py-2.5 rounded-xl bg-[#0066FF] text-white font-semibold text-xs hover:bg-[#0052CC] transition-all"
         >
           Coba Muat Ulang
         </button>
@@ -52,305 +54,255 @@ export default function DashboardPage() {
 
   if (!data) return null;
 
-  const overdueCount = data.upcomingDeadlines.filter((t) => t.isOverdue).length;
-  const dueSoonCount = data.upcomingDeadlines.filter((t) => t.isDueSoon).length;
+  const query = searchQuery.trim().toLowerCase();
+
+  const filteredTasks = data.taskProgressList.filter((task) => {
+    if (activeTab === "active" && task.status === "Done") return false;
+    if (!query) return true;
+    return (
+      task.title.toLowerCase().includes(query) ||
+      task.courseCode.toLowerCase().includes(query)
+    );
+  });
+
+  const filteredDeadlines = data.upcomingDeadlines.filter((item) => {
+    if (!query) return true;
+    return (
+      item.title.toLowerCase().includes(query) ||
+      item.courseCode.toLowerCase().includes(query) ||
+      item.courseName.toLowerCase().includes(query)
+    );
+  });
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-200">
-      {/* HERO BANNER CARD */}
-      <div className="relative overflow-hidden rounded-[8px] border border-blue-100 bg-gradient-to-r from-blue-50/90 via-indigo-50/50 to-white p-6 sm:p-8">
-        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-[8px] bg-blue-100/70 text-blue-700 text-xs font-semibold">
-              Portal Akademik Mahasiswa
-            </div>
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-              Selamat Datang di Sistem MyTask
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              Pantau jadwal kuliah, target pengerjaan tugas, subtugas terperinci, dan tenggat waktu
-              terdekat dalam satu ruang kerja yang terorganisir.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
-            <Link
-              href="/courses"
-              className="px-4 py-2.5 rounded-[8px] bg-white border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 hover:border-slate-300 transition-all shadow-xs"
-            >
-              Kelola Mata Kuliah
-            </Link>
-            <Link
-              href="/tasks"
-              className="px-4 py-2.5 rounded-[8px] bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition-all shadow-sm"
-            >
-              + Tambah Tugas
-            </Link>
-          </div>
-        </div>
-
-        {/* Decorative background shape */}
-        <div className="absolute -right-8 -bottom-8 w-48 h-48 rounded-full bg-blue-100/40 blur-2xl pointer-events-none" />
+    <div className="space-y-7 animate-fade-up">
+      {/* 4 KPI STAT CARDS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+        <StatCard
+          href="/tasks"
+          label="Belum Selesai"
+          value={data.pendingTasks}
+          description="Menunggu diselesaikan"
+          tone="blue"
+        />
+        <StatCard
+          href="/courses"
+          label="Mata Kuliah"
+          value={data.totalCourses}
+          description="Mata kuliah terdaftar"
+          tone="yellow"
+        />
+        <StatCard
+          href="/tasks"
+          label="Total Tugas"
+          value={data.totalTasks}
+          description="Seluruh tugas tercatat"
+          tone="blue"
+        />
+        <StatCard
+          href="/tasks?status=Done"
+          label="Selesai"
+          value={data.completedTasks}
+          description="Sudah dituntaskan"
+          tone="yellow"
+        />
       </div>
 
-      {/* METRIC STATS CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Total Courses */}
-        <div className="rounded-[8px] border border-slate-200 bg-white p-5 flex flex-col justify-between hover:border-blue-200 transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Mata Kuliah
-            </span>
-            <span className="px-2 py-0.5 rounded-[8px] bg-blue-50 text-blue-700 text-[11px] font-semibold border border-blue-100">
-              Aktif
-            </span>
-          </div>
-          <div className="my-3">
-            <div className="text-3xl font-extrabold text-slate-900">{data.totalCourses}</div>
-            <div className="text-xs text-slate-500 mt-1">mata kuliah terdaftar</div>
-          </div>
-          <Link
-            href="/courses"
-            className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline inline-flex items-center gap-1"
+      {/* TABS, SEARCH & PRIMARY CTA */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-6 border-b border-slate-200/70 md:border-b-0 pb-2 md:pb-0">
+          <button
+            type="button"
+            onClick={() => setActiveTab("active")}
+            className={`text-sm font-bold transition-colors ${
+              activeTab === "active"
+                ? "text-[#0066FF]"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
           >
-            Lihat mata kuliah &rarr;
-          </Link>
+            Progres Tugas & Subtugas
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("all")}
+            className={`text-sm font-bold transition-colors ${
+              activeTab === "all"
+                ? "text-[#0066FF]"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            Semua Tugas
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("deadlines")}
+            className={`text-sm font-bold transition-colors flex items-center gap-1.5 ${
+              activeTab === "deadlines"
+                ? "text-[#0066FF]"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <span>Tenggat Terdekat</span>
+            {data.upcomingDeadlines.length > 0 && (
+              <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-[#EEF4FF] text-[#0066FF]">
+                {data.upcomingDeadlines.length}
+              </span>
+            )}
+          </button>
         </div>
 
-        {/* Card 2: Total Tasks */}
-        <div className="rounded-[8px] border border-slate-200 bg-white p-5 flex flex-col justify-between hover:border-blue-200 transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Total Tugas
-            </span>
-            <span className="px-2 py-0.5 rounded-[8px] bg-slate-100 text-slate-600 text-[11px] font-semibold border border-slate-200">
-              Semua
-            </span>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="relative">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Cari tugas atau mata kuliah..."
+              className="w-full sm:w-64 pl-10 pr-4 py-2.5 rounded-xl bg-white border border-slate-200/80 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition-all"
+            />
           </div>
-          <div className="my-3">
-            <div className="text-3xl font-extrabold text-slate-900">{data.totalTasks}</div>
-            <div className="text-xs text-slate-500 mt-1">seluruh tugas tercatat</div>
-          </div>
+
           <Link
             href="/tasks"
-            className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline inline-flex items-center gap-1"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#0066FF] hover:bg-[#0052CC] text-white text-xs font-semibold transition-all shrink-0"
           >
-            Lihat seluruh tugas &rarr;
-          </Link>
-        </div>
-
-        {/* Card 3: Pending Tasks */}
-        <div className="rounded-[8px] border border-amber-200 bg-amber-50/30 p-5 flex flex-col justify-between hover:border-amber-300 transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-amber-800">
-              Belum Selesai
-            </span>
-            <Badge variant="warning" size="sm" dot>
-              {data.pendingTasks} Tugas
-            </Badge>
-          </div>
-          <div className="my-3">
-            <div className="text-3xl font-extrabold text-amber-900">{data.pendingTasks}</div>
-            <div className="text-xs text-amber-700/80 mt-1">Todo / In Progress</div>
-          </div>
-          <Link
-            href="/tasks?status=Todo"
-            className="text-xs font-semibold text-amber-800 hover:text-amber-900 hover:underline inline-flex items-center gap-1"
-          >
-            Tinjau tugas pending &rarr;
-          </Link>
-        </div>
-
-        {/* Card 4: Completed Tasks */}
-        <div className="rounded-[8px] border border-emerald-200 bg-emerald-50/30 p-5 flex flex-col justify-between hover:border-emerald-300 transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-emerald-800">
-              Selesai Dikerjakan
-            </span>
-            <Badge variant="success" size="sm" dot>
-              Done
-            </Badge>
-          </div>
-          <div className="my-3">
-            <div className="text-3xl font-extrabold text-emerald-800">{data.completedTasks}</div>
-            <div className="text-xs text-emerald-700/80 mt-1">tugas telah rampung</div>
-          </div>
-          <Link
-            href="/tasks?status=Done"
-            className="text-xs font-semibold text-emerald-800 hover:text-emerald-900 hover:underline inline-flex items-center gap-1"
-          >
-            Tinjau riwayat selesai &rarr;
+            <Plus className="w-4 h-4" strokeWidth={2.2} />
+            <span>Buat Tugas Baru</span>
           </Link>
         </div>
       </div>
 
-      {/* TWO COLUMN GRID: DEADLINES & PROGRESS */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* COLUMN 1: UPCOMING DEADLINES */}
-        <div className="rounded-[8px] border border-slate-200 bg-white p-6 space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-slate-900">Deadline Terdekat</h3>
-                {(overdueCount > 0 || dueSoonCount > 0) && (
-                  <span className="px-2 py-0.5 rounded-[8px] text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                    {overdueCount + dueSoonCount} Mendesak
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Tugas aktif yang diurutkan berdasarkan tanggal tenggat terdekat
-              </p>
-            </div>
-            <Link
-              href="/deadlines"
-              className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline"
-            >
-              Lihat Semua &rarr;
-            </Link>
-          </div>
-
-          {data.upcomingDeadlines.length === 0 ? (
-            <div className="p-8 rounded-[8px] text-center border border-dashed border-slate-200 text-xs text-slate-500">
-              Tidak ada tugas yang menunggu deadline. Seluruh tugas telah selesai!
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {data.upcomingDeadlines.slice(0, 5).map((task) => (
-                <div
-                  key={task.id}
-                  className={`p-4 rounded-[8px] border transition-all ${task.isOverdue
-                      ? "border-rose-200 bg-rose-50/40 hover:bg-rose-50/60"
-                      : task.isDueSoon
-                        ? "border-amber-200 bg-amber-50/40 hover:bg-amber-50/60"
-                        : "border-slate-200/80 bg-slate-50/40 hover:bg-slate-50/80"
-                    }`}
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
-                    <div className="space-y-1 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-[8px] border border-blue-100">
-                          {task.courseCode}
-                        </span>
-                        <span className="text-xs text-slate-500 truncate max-w-xs">
-                          {task.courseName}
-                        </span>
-                      </div>
-                      <h4 className="text-sm font-semibold text-slate-900 hover:text-blue-600">
-                        <Link href={`/tasks/${task.id}`}>{task.title}</Link>
-                      </h4>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-1.5 self-start shrink-0">
-                      {task.isOverdue ? (
-                        <Badge variant="danger" size="sm" dot>
-                          Terlewat {Math.abs(task.daysRemaining)} hari
-                        </Badge>
-                      ) : task.isDueSoon ? (
-                        <Badge variant="warning" size="sm" dot>
-                          {task.daysRemaining} hari lagi
-                        </Badge>
-                      ) : (
-                        <Badge variant="neutral" size="sm">
-                          {task.daysRemaining} hari lagi
-                        </Badge>
-                      )}
-                      <Badge
-                        variant={
-                          task.priority === "High"
-                            ? "danger"
-                            : task.priority === "Medium"
-                              ? "warning"
-                              : "neutral"
-                        }
-                        size="sm"
-                      >
-                        {task.priority}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 pt-2.5 border-t border-slate-200/60 flex items-center justify-between text-xs text-slate-500">
-                    <span>Tenggat: {task.deadline}</span>
-                    <Link
-                      href={`/tasks/${task.id}`}
-                      className="font-medium text-blue-600 hover:text-blue-700 hover:underline"
-                    >
-                      Buka Rincian &rarr;
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* COLUMN 2: TASK PROGRESS OVERVIEW */}
-        <div className="rounded-[8px] border border-slate-200 bg-white p-6 space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-            <div>
-              <h3 className="text-base font-bold text-slate-900">Progres Subtugas</h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Tingkat penyelesaian checklist per mata kuliah
-              </p>
-            </div>
-            <Link
-              href="/tasks"
-              className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline"
-            >
-              Kelola Tugas &rarr;
-            </Link>
-          </div>
-
-          {data.taskProgressList.length === 0 ? (
-            <EmptyState
-              title="Belum ada data tugas"
-              description="Tambahkan tugas dan subtugas untuk mulai memantau persentase progres penyelesaian."
-            />
-          ) : (
-            <div className="space-y-3.5 max-h-[440px] overflow-y-auto pr-1">
-              {data.taskProgressList.map((item) => (
-                <div
-                  key={item.id}
-                  className="p-4 rounded-[8px] border border-slate-200/80 bg-slate-50/40 hover:bg-slate-50/80 transition-all space-y-2.5"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-0.5">
-                      <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-[8px] border border-blue-100">
-                        {item.courseCode}
+      {/* CONTENT GRID */}
+      {activeTab === "deadlines" ? (
+        filteredDeadlines.length === 0 ? (
+          <EmptyState
+            title="Tidak ada tenggat waktu aktif"
+            description="Semua tugas sudah diselesaikan atau belum ada tugas yang cocok dengan pencarian."
+          />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            {filteredDeadlines.map((item) => (
+              <Link
+                key={item.id}
+                href={`/tasks/${item.id}`}
+                className="group rounded-2xl bg-white p-5 border border-slate-200/70 hover:border-blue-200 transition-all flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="text-sm font-bold text-slate-900 group-hover:text-[#0066FF] transition-colors line-clamp-2">
+                      {item.title}
+                    </h3>
+                    {item.isOverdue ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-50 text-rose-600 text-[11px] font-semibold shrink-0">
+                        <AlertTriangle className="w-3 h-3" />
+                        Terlambat
                       </span>
-                      <h4 className="text-sm font-semibold text-slate-800 hover:text-blue-600">
-                        <Link href={`/tasks/${item.id}`}>{item.title}</Link>
-                      </h4>
-                    </div>
-                    <Badge
-                      variant={
-                        item.status === "Done"
-                          ? "success"
-                          : item.status === "In Progress"
-                            ? "primary"
-                            : "neutral"
-                      }
-                      size="sm"
-                      dot
-                    >
-                      {item.status}
-                    </Badge>
+                    ) : item.isDueSoon ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#FEF08A] text-amber-900 text-[11px] font-semibold shrink-0">
+                        <Clock className="w-3 h-3" />
+                        Mendesak
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#EEF4FF] text-[#0066FF] text-[11px] font-semibold shrink-0">
+                        <Calendar className="w-3 h-3" />
+                        {item.daysRemaining}h lagi
+                      </span>
+                    )}
                   </div>
+                  <p className="text-xs text-slate-500 mt-1.5 line-clamp-1">
+                    {item.courseName}
+                  </p>
+                </div>
 
-                  <div className="pt-1">
-                    <ProgressBar
-                      percentage={item.progressPercentage}
-                      totalSubtasks={item.totalSubtasks}
-                      completedSubtasks={item.completedSubtasks}
-                    />
+                <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
+                  <span className="px-2.5 py-1 rounded-lg bg-[#EEF4FF] text-[#0066FF] text-[11px] font-semibold font-mono">
+                    {item.courseCode}
+                  </span>
+                  <span className="text-xs text-slate-500 flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                    {item.deadline}
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )
+      ) : filteredTasks.length === 0 ? (
+        <EmptyState
+          title="Belum ada tugas ditemukan"
+          description="Coba ubah kata kunci pencarian atau tambahkan tugas baru di halaman Daftar Tugas."
+          actionText="Buka Daftar Tugas"
+          onAction={() => {
+            window.location.href = "/tasks";
+          }}
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          {filteredTasks.map((task) => {
+            const pct = task.progressPercentage ?? (task.status === "Done" ? 100 : 0);
+            const isDone = task.status === "Done";
+            return (
+              <Link
+                key={task.id}
+                href={`/tasks/${task.id}`}
+                className="group rounded-2xl bg-white p-5 border border-slate-200/70 hover:border-blue-200 transition-all flex flex-col justify-between"
+              >
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-[#0066FF] transition-colors line-clamp-1">
+                    {task.title}
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    {task.totalSubtasks > 0
+                      ? `${task.completedSubtasks} dari ${task.totalSubtasks} subtugas selesai`
+                      : "Belum ada subtugas"}
+                  </p>
+
+                  {/* Progress Bar Row */}
+                  <div className="mt-4 flex items-center gap-3">
+                    <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-300 ${
+                          isDone ? "bg-emerald-500" : "bg-[#0066FF]"
+                        }`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <span className="text-xs font-bold text-slate-700 w-9 text-right tabular-nums">
+                      {pct}%
+                    </span>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+
+                <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-1 rounded-lg bg-[#EEF4FF] text-[#0066FF] text-[11px] font-semibold font-mono">
+                      {task.courseCode}
+                    </span>
+                    <span
+                      className={`px-2.5 py-1 rounded-full text-[11px] font-semibold inline-flex items-center gap-1 ${
+                        task.status === "Done"
+                          ? "bg-emerald-50 text-emerald-700"
+                          : task.status === "In Progress"
+                          ? "bg-blue-50 text-[#0066FF]"
+                          : "bg-slate-100 text-slate-600"
+                      }`}
+                    >
+                      {task.status === "Done" && <CheckCircle2 className="w-3 h-3" />}
+                      {task.status}
+                    </span>
+                  </div>
+
+                  <span className="text-xs font-semibold text-slate-400 group-hover:text-[#0066FF] inline-flex items-center gap-1 transition-colors">
+                    Detail
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
         </div>
-      </div>
+      )}
     </div>
   );
 }

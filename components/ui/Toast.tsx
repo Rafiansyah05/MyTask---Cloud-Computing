@@ -76,7 +76,7 @@ export const ToastBanner: React.FC<ToastBannerProps> = ({
     <div
       role={role}
       aria-live={type === "error" ? "assertive" : "polite"}
-      className={`flex items-start justify-between gap-3 px-4 py-3 rounded-card border animate-fade-up ${styleMap[type]} ${className}`}
+      className={`flex items-start justify-between gap-3 px-4 py-3 rounded-2xl border animate-fade-up ${styleMap[type]} ${className}`}
     >
       <div className="flex items-start gap-2.5 min-w-0">
         <span className="mt-0.5" aria-hidden="true">
@@ -131,12 +131,13 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({
         className="fixed bottom-20 lg:bottom-6 right-4 left-4 sm:left-auto sm:w-96 z-50 flex flex-col gap-2 pointer-events-none"
       >
         {toasts.map((t) => (
-          <div key={t.id} className="pointer-events-auto shadow-float rounded-card">
+          <div key={t.id} className="pointer-events-auto rounded-2xl">
             <ToastBanner
               type={t.type}
               title={t.title}
               message={t.message}
               onClose={() => removeToast(t.id)}
+              className="shadow-float"
             />
           </div>
         ))}

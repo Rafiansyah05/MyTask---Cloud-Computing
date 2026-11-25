@@ -61,6 +61,9 @@ module.exports = {
         none: "none",
         float:
           "0 8px 24px -4px rgba(22, 20, 15, 0.08), 0 2px 6px -1px rgba(22, 20, 15, 0.04)",
+        modal:
+          "0 32px 64px -16px rgba(4, 13, 31, 0.35), 0 8px 24px -8px rgba(4, 13, 31, 0.2)",
+        lift: "0 24px 40px -12px rgba(15, 23, 42, 0.28), 0 8px 16px -8px rgba(0, 102, 255, 0.25)",
       },
       transitionTimingFunction: {
         editorial: "cubic-bezier(0.22, 1, 0.36, 1)",
@@ -76,16 +79,35 @@ module.exports = {
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
         "modal-in": {
-          "0%": { opacity: "0", transform: "scale(0.97) translateY(4px)" },
+          "0%": { opacity: "0", transform: "scale(0.95) translateY(12px)" },
           "100%": { opacity: "1", transform: "scale(1) translateY(0)" },
+        },
+        "sheet-in": {
+          "0%": { transform: "translateY(100%)" },
+          "100%": { transform: "translateY(0)" },
+        },
+        "drawer-in": {
+          "0%": { transform: "translateX(-100%)" },
+          "100%": { transform: "translateX(0)" },
+        },
+        "slot-in": {
+          "0%": { opacity: "0", gridTemplateRows: "0fr" },
+          "100%": { opacity: "1", gridTemplateRows: "1fr" },
+        },
+        "card-lift": {
+          "0%": {
+            transform: "scale(1) rotate(0deg)",
+            boxShadow: "0 0 0 0 rgba(15, 23, 42, 0)",
+          },
+          "100%": { transform: "scale(1.04) rotate(2.5deg)" },
         },
         "backdrop-in": {
           "0%": { opacity: "0" },
           "100%": { opacity: "1" },
         },
         "dropdown-in": {
-          "0%": { opacity: "0", transform: "translateY(-4px)" },
-          "100%": { opacity: "1", transform: "translateY(0)" },
+          "0%": { opacity: "0", transform: "scale(0.95) translateY(-4px)" },
+          "100%": { opacity: "1", transform: "scale(1) translateY(0)" },
         },
         "draw-check": {
           "0%": { strokeDashoffset: "24" },
@@ -98,7 +120,11 @@ module.exports = {
       },
       animation: {
         "fade-up": "fade-up 200ms cubic-bezier(0.22, 1, 0.36, 1) both",
-        "modal-in": "modal-in 200ms cubic-bezier(0.22, 1, 0.36, 1) both",
+        "modal-in": "modal-in 240ms cubic-bezier(0.22, 1, 0.36, 1) both",
+        "sheet-in": "sheet-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both",
+        "drawer-in": "drawer-in 280ms cubic-bezier(0.22, 1, 0.36, 1) both",
+        "slot-in": "slot-in 200ms cubic-bezier(0.22, 1, 0.36, 1) both",
+        "card-lift": "card-lift 180ms cubic-bezier(0.22, 1, 0.36, 1) both",
         "backdrop-in": "backdrop-in 200ms cubic-bezier(0.22, 1, 0.36, 1) both",
         "dropdown-in": "dropdown-in 120ms cubic-bezier(0.22, 1, 0.36, 1) both",
         "draw-check": "draw-check 200ms cubic-bezier(0.22, 1, 0.36, 1) forwards",

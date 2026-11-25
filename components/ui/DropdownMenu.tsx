@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useId, useRef, useState } from "react";
-import { MoreVertical } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 
 export type DropdownMenuItem = {
   label: string;
@@ -95,9 +95,9 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
           e.stopPropagation();
           setOpen((prev) => !prev);
         }}
-        className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] sm:min-h-[34px] sm:min-w-[34px] p-1.5 rounded-control border border-line bg-surface-raised text-ink-700 hover:border-ink-300 hover:text-ink-900 transition-[background-color,border-color,color] duration-micro ease-editorial focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+        className="inline-flex items-center justify-center w-11 h-11 sm:w-8 sm:h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 aria-expanded:bg-slate-100 aria-expanded:text-slate-700 transition-colors duration-micro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
-        <MoreVertical className="w-4 h-4" strokeWidth={1.5} aria-hidden="true" />
+        <MoreHorizontal className="w-4 h-4" aria-hidden="true" />
       </button>
 
       {open && (
@@ -105,14 +105,14 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
           id={menuId}
           role="menu"
           className={`absolute ${
-            align === "right" ? "right-0" : "left-0"
-          } mt-1.5 w-44 rounded-card border border-line bg-surface shadow-float py-1 z-30 animate-dropdown-in`}
+            align === "right" ? "right-0 origin-top-right" : "left-0 origin-top-left"
+          } mt-1.5 w-52 rounded-2xl border border-slate-200/70 bg-surface p-1.5 shadow-float z-30 animate-dropdown-in`}
           onClick={(e) => e.stopPropagation()}
         >
           {items.map((item, idx) => (
             <React.Fragment key={item.label}>
               {item.dividerBefore && (
-                <div className="my-1 border-t border-line" role="separator" />
+                <div className="my-1.5 mx-1.5 border-t border-slate-100" role="separator" />
               )}
               <button
                 ref={(el) => {
@@ -123,12 +123,13 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
                 onKeyDown={(e) => handleMenuKeyDown(e, idx)}
                 onClick={() => {
                   setOpen(false);
+                  triggerRef.current?.focus();
                   item.onClick();
                 }}
-                className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 sm:py-2 text-left text-small font-medium transition-colors duration-micro focus-visible:outline-none ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2.5 sm:py-2 rounded-lg text-left text-xs font-medium transition-colors duration-micro focus-visible:outline-none ${
                   item.variant === "danger"
-                    ? "text-danger hover:bg-danger-soft focus-visible:bg-danger-soft"
-                    : "text-ink-700 hover:bg-paper hover:text-ink-900 focus-visible:bg-paper focus-visible:text-ink-900"
+                    ? "text-rose-600 hover:bg-rose-50 focus-visible:bg-rose-50"
+                    : "text-slate-700 hover:bg-[#EEF4FF] hover:text-[#0066FF] focus-visible:bg-[#EEF4FF] focus-visible:text-[#0066FF]"
                 }`}
               >
                 {item.icon && (

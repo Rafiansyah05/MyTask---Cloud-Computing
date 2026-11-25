@@ -33,7 +33,7 @@ export const PriorityIndicator: React.FC<PriorityIndicatorProps> = ({
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 text-micro font-medium ${style.text} ${className}`}
+      className={`inline-flex items-center gap-2 text-sm font-semibold ${style.text} ${className}`}
     >
       <span
         className={`w-1.5 h-1.5 rounded-full shrink-0 ${style.dot}`}

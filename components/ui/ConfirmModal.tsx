@@ -1,8 +1,9 @@
 "use client";
 
 import React from "react";
+import { Info, Trash2 } from "lucide-react";
 import { Modal } from "./Modal";
-import { Button } from "./Button";
+import { ModalActions } from "./ModalActions";
 
 type ConfirmModalProps = {
   isOpen: boolean;
@@ -23,33 +24,39 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   title,
   message,
   confirmLabel = "Konfirmasi Hapus",
-  cancelLabel = "Batal",
+  cancelLabel,
   isDestructive = true,
   isLoading = false,
 }) => {
+  const Icon = isDestructive ? Trash2 : Info;
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} maxWidth="sm">
-      <div className="space-y-6">
-        <p className="text-body text-ink-700 leading-relaxed">{message}</p>
-
-        <div className="flex flex-col-reverse sm:flex-row justify-end gap-2.5 pt-4 border-t border-line">
-          <Button
-            variant="secondary"
-            size="md"
-            onClick={onClose}
-            disabled={isLoading}
+      <div className="space-y-5">
+        <div className="flex items-start gap-4">
+          <span
+            className={`flex items-center justify-center w-11 h-11 shrink-0 rounded-full ${
+              isDestructive
+                ? "bg-rose-50 text-rose-600"
+                : "bg-[#EEF4FF] text-[#0066FF]"
+            }`}
           >
-            {cancelLabel}
-          </Button>
-          <Button
-            variant={isDestructive ? "danger" : "primary"}
-            size="md"
-            onClick={onConfirm}
-            loading={isLoading}
-          >
-            {confirmLabel}
-          </Button>
+            <Icon className="w-5 h-5" aria-hidden="true" />
+          </span>
+          <p className="min-w-0 text-sm text-slate-600 leading-relaxed break-words">
+            {message}
+          </p>
         </div>
+
+        <ModalActions
+          onCancel={onClose}
+          onConfirm={onConfirm}
+          confirmLabel={confirmLabel}
+          cancelLabel={cancelLabel}
+          loadingLabel="Memproses..."
+          isLoading={isLoading}
+          isDestructive={isDestructive}
+        />
       </div>
     </Modal>
   );

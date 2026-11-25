@@ -35,7 +35,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     return (
       <div className={`space-y-1.5 ${className}`}>
         <div
-          className="h-1.5 w-full bg-line rounded-full overflow-hidden"
+          className="h-2 w-full bg-slate-100 rounded-full overflow-hidden"
           role="progressbar"
           aria-valuenow={0}
           aria-valuemin={0}
@@ -56,7 +56,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   return (
     <div className={`space-y-1.5 ${className}`}>
       <div
-        className="h-1.5 w-full bg-line rounded-full overflow-hidden"
+        className="h-2 w-full bg-slate-100 rounded-full overflow-hidden"
         role="progressbar"
         aria-valuenow={targetWidth}
         aria-valuemin={0}
@@ -65,7 +65,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       >
         <div
           className={`h-full rounded-full transition-[width,background-color] duration-layout ease-editorial ${
-            isCompleted ? "bg-success" : "bg-accent"
+            isCompleted ? "bg-emerald-500" : "bg-[#0066FF]"
           }`}
           style={{ width: `${displayWidth}%` }}
         />

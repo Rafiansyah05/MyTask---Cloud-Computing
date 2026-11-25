@@ -17,8 +17,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   onAction,
 }) => {
   return (
-    <div className="rounded-card border border-dashed border-ink-300 bg-surface-raised/60 px-6 py-10 text-center space-y-4">
-      {/* Custom editorial inline SVG illustration (ink + accent) */}
+    <div className="rounded-2xl border border-dashed border-slate-300 bg-white/80 px-6 py-12 text-center space-y-4">
       <svg
         width="64"
         height="56"
@@ -33,26 +32,26 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           y="6"
           width="44"
           height="44"
-          rx="6"
-          fill="#FBF9F4"
-          stroke="#B9B3A4"
+          rx="10"
+          fill="#F8FAFC"
+          stroke="#CBD5E1"
           strokeWidth="1.5"
         />
         <path
           d="M18 18H46"
-          stroke="#E4DFD2"
+          stroke="#E2E8F0"
           strokeWidth="1.5"
           strokeLinecap="round"
         />
         <path
           d="M18 26H38"
-          stroke="#6B665A"
+          stroke="#64748B"
           strokeWidth="1.5"
           strokeLinecap="round"
         />
         <path
           d="M18 34H30"
-          stroke="#B9B3A4"
+          stroke="#CBD5E1"
           strokeWidth="1.5"
           strokeLinecap="round"
         />
@@ -60,21 +59,21 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           cx="46"
           cy="38"
           r="9"
-          fill="#FDE9E1"
-          stroke="#E8481C"
+          fill="#EEF4FF"
+          stroke="#0066FF"
           strokeWidth="1.5"
         />
         <path
           d="M42.5 38H49.5"
-          stroke="#E8481C"
+          stroke="#0066FF"
           strokeWidth="1.5"
           strokeLinecap="round"
         />
       </svg>
 
       <div className="space-y-1.5 max-w-sm mx-auto">
-        <h3 className="font-serif text-title text-ink-900">{title}</h3>
-        <p className="text-small text-ink-500 leading-relaxed">{description}</p>
+        <h3 className="text-base font-bold text-slate-900">{title}</h3>
+        <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">{description}</p>
       </div>
 
       {actionText && onAction && (

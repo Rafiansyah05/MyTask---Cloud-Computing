@@ -2,16 +2,19 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { Calendar, Clock, AlertTriangle, ArrowRight } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { UpcomingDeadlineTask } from "@/types";
-import { Badge } from "@/components/ui/Badge";
 import { Alert } from "@/components/ui/Alert";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { StatCard } from "@/components/ui/StatCard";
 
 export default function DeadlinesPage() {
   const [deadlines, setDeadlines] = useState<UpcomingDeadlineTask[]>([]);
-  const [filterType, setFilterType] = useState<"all" | "overdue" | "dueSoon">("all");
+  const [filterType, setFilterType] = useState<"all" | "overdue" | "dueSoon">(
+    "all"
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,200 +45,126 @@ export default function DeadlinesPage() {
   const dueSoonCount = deadlines.filter((d) => d.isDueSoon).length;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
-      {/* Page Header Card */}
-      <div className="rounded-[8px] border border-slate-200 bg-white p-5 sm:p-6">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="w-2 h-2 rounded-full bg-blue-600" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-            Jadwal & Waktu
-          </span>
-        </div>
-        <h2 className="text-xl font-bold text-slate-900 tracking-tight">Tenggat Waktu (Upcoming Deadlines)</h2>
-        <p className="text-xs text-slate-500 mt-0.5">
-          Daftar seluruh tugas perkuliahan aktif yang belum selesai, diprioritaskan berdasarkan deadline terdekat
-        </p>
-      </div>
-
+    <div className="space-y-6 animate-fade-up">
       {error && <Alert type="error" title="Gagal Memuat" message={error} />}
 
-      {/* QUICK STATUS SUMMARY CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div
+      {/* 3 CLICKABLE KPI SUMMARY CARDS */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <StatCard
+          label="Total Tugas Aktif"
+          value={deadlines.length}
+          description="Menunggu penyelesaian"
+          tone="blue"
+          isActive={filterType === "all"}
           onClick={() => setFilterType("all")}
-          className={`cursor-pointer p-5 rounded-[8px] border transition-all ${
-            filterType === "all"
-              ? "border-blue-300 bg-blue-50/50 shadow-xs"
-              : "border-slate-200 bg-white hover:border-slate-300"
-          }`}
-        >
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-            Total Tugas Aktif
-          </div>
-          <div className="text-2xl font-bold text-slate-900 my-1">{deadlines.length}</div>
-          <div className="text-xs text-slate-500">Menunggu penyelesaian</div>
-        </div>
-
-        <div
+        />
+        <StatCard
+          label="Mendesak (≤ 3 Hari)"
+          value={dueSoonCount}
+          description="Perlu diprioritaskan segera"
+          tone="yellow"
+          isActive={filterType === "dueSoon"}
           onClick={() => setFilterType("dueSoon")}
-          className={`cursor-pointer p-5 rounded-[8px] border transition-all ${
-            filterType === "dueSoon"
-              ? "border-amber-300 bg-amber-50/70 shadow-xs"
-              : "border-amber-200/80 bg-amber-50/30 hover:border-amber-300"
-          }`}
-        >
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-amber-800">
-            Mendesak (&le; 3 Hari)
-          </div>
-          <div className="text-2xl font-bold text-amber-900 my-1">{dueSoonCount}</div>
-          <div className="text-xs text-amber-700/80">Perlu diprioritaskan segera</div>
-        </div>
-
-        <div
+        />
+        <StatCard
+          label="Lewat Deadline"
+          value={overdueCount}
+          description="Melewati tanggal tenggat"
+          tone="red"
+          isActive={filterType === "overdue"}
           onClick={() => setFilterType("overdue")}
-          className={`cursor-pointer p-5 rounded-[8px] border transition-all ${
-            filterType === "overdue"
-              ? "border-rose-300 bg-rose-50/70 shadow-xs"
-              : "border-rose-200/80 bg-rose-50/30 hover:border-rose-300"
-          }`}
-        >
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-rose-800">
-            Lewat Deadline (Terlambat)
-          </div>
-          <div className="text-2xl font-bold text-rose-900 my-1">{overdueCount}</div>
-          <div className="text-xs text-rose-700/80">Melewati tanggal tenggat</div>
-        </div>
+        />
       </div>
 
-      {/* SEGMENTED FILTER PILLS */}
-      <div className="flex flex-wrap items-center gap-2 rounded-[8px] border border-slate-200 bg-white p-2">
-        <span className="text-xs font-semibold text-slate-500 px-2">Tampilkan:</span>
-        <button
-          type="button"
-          onClick={() => setFilterType("all")}
-          className={`px-3 py-1.5 text-xs font-medium rounded-[8px] transition-all ${
-            filterType === "all"
-              ? "bg-blue-600 text-white shadow-xs font-semibold"
-              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-          }`}
-        >
-          Semua ({deadlines.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setFilterType("dueSoon")}
-          className={`px-3 py-1.5 text-xs font-medium rounded-[8px] transition-all ${
-            filterType === "dueSoon"
-              ? "bg-amber-600 text-white shadow-xs font-semibold"
-              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-          }`}
-        >
-          Mendesak &le; 3 Hari ({dueSoonCount})
-        </button>
-        <button
-          type="button"
-          onClick={() => setFilterType("overdue")}
-          className={`px-3 py-1.5 text-xs font-medium rounded-[8px] transition-all ${
-            filterType === "overdue"
-              ? "bg-rose-600 text-white shadow-xs font-semibold"
-              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-          }`}
-        >
-          Lewat Deadline ({overdueCount})
-        </button>
+      {/* FILTER PILLS */}
+      <div className="flex flex-wrap items-center gap-2">
+        {[
+          { key: "all", label: `Semua (${deadlines.length})` },
+          { key: "dueSoon", label: `Mendesak (${dueSoonCount})` },
+          { key: "overdue", label: `Terlambat (${overdueCount})` },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() =>
+              setFilterType(tab.key as "all" | "overdue" | "dueSoon")
+            }
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+              filterType === tab.key
+                ? "bg-[#0066FF] text-white"
+                : "bg-white text-slate-600 border border-slate-200/80 hover:text-slate-900"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      {/* DEADLINE LIST */}
+      {/* DEADLINES LIST */}
       {loading ? (
         <LoadingState message="Memuat jadwal tenggat waktu..." />
       ) : filteredDeadlines.length === 0 ? (
         <EmptyState
-          title="Tidak ada deadline pada kategori ini"
-          description={
-            filterType !== "all"
-              ? "Tidak ada tugas dengan kriteria filter tersebut. Coba pilih 'Semua'."
-              : "Selamat! Tidak ada tugas perkuliahan yang tertunda atau seluruh tugas telah selesai dikerjakan."
-          }
-          actionText={filterType !== "all" ? "Tampilkan Semua Deadline" : undefined}
-          onAction={() => setFilterType("all")}
+          title="Tidak ada tenggat waktu"
+          description="Tidak ada tugas aktif yang cocok dengan kategori tenggat ini."
+          actionText="Lihat Daftar Tugas"
+          onAction={() => {
+            window.location.href = "/tasks";
+          }}
         />
       ) : (
-        <div className="space-y-3">
-          {filteredDeadlines.map((task) => (
-            <div
-              key={task.id}
-              className={`p-5 rounded-[8px] border transition-all ${
-                task.isOverdue
-                  ? "border-rose-200 bg-rose-50/40 hover:bg-rose-50/60"
-                  : task.isDueSoon
-                  ? "border-amber-200 bg-amber-50/40 hover:bg-amber-50/60"
-                  : "border-slate-200 bg-white hover:border-slate-300"
-              }`}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          {filteredDeadlines.map((item) => (
+            <Link
+              key={item.id}
+              href={`/tasks/${item.id}`}
+              className="group bg-white rounded-2xl p-5 border border-slate-200/70 hover:border-blue-200 transition-all flex flex-col justify-between"
             >
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="space-y-2 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-[8px] border border-blue-100">
-                      {task.courseCode} • {task.courseName}
+              <div>
+                <div className="flex items-start justify-between gap-2">
+                  <span className="px-2.5 py-1 rounded-lg bg-[#EEF4FF] text-[#0066FF] text-[11px] font-bold font-mono">
+                    {item.courseCode}
+                  </span>
+
+                  {item.isOverdue ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 text-[11px] font-semibold">
+                      <AlertTriangle className="w-3 h-3" />
+                      Terlambat {Math.abs(item.daysRemaining)}h
                     </span>
-                    {task.isOverdue ? (
-                      <Badge variant="danger" size="md" dot>
-                        Terlewat {Math.abs(task.daysRemaining)} Hari
-                      </Badge>
-                    ) : task.isDueSoon ? (
-                      <Badge variant="warning" size="md" dot>
-                        Mendesak ({task.daysRemaining} hari lagi)
-                      </Badge>
-                    ) : (
-                      <Badge variant="neutral" size="md">
-                        {task.daysRemaining} hari lagi
-                      </Badge>
-                    )}
-                    <Badge
-                      variant={
-                        task.priority === "High"
-                          ? "danger"
-                          : task.priority === "Medium"
-                          ? "warning"
-                          : "neutral"
-                      }
-                      size="sm"
-                    >
-                      Prioritas {task.priority}
-                    </Badge>
-                    <Badge variant={task.status === "In Progress" ? "primary" : "neutral"} size="sm">
-                      {task.status}
-                    </Badge>
-                  </div>
-
-                  <h3 className="text-base font-bold text-slate-900 hover:text-blue-600 transition-colors">
-                    <Link href={`/tasks/${task.id}`}>{task.title}</Link>
-                  </h3>
-
-                  {task.description && (
-                    <p className="text-xs text-slate-500 leading-relaxed line-clamp-2">
-                      {task.description}
-                    </p>
+                  ) : item.isDueSoon ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#FFE600] text-slate-900 text-[11px] font-semibold">
+                      <Clock className="w-3 h-3" />
+                      {item.daysRemaining === 0
+                        ? "Hari Ini"
+                        : `${item.daysRemaining} Hari Lagi`}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-[11px] font-semibold">
+                      <Calendar className="w-3 h-3" />
+                      {item.daysRemaining} Hari Lagi
+                    </span>
                   )}
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 shrink-0 pt-3 md:pt-0 border-t md:border-t-0 border-slate-100">
-                  <div className="text-left sm:text-right">
-                    <div className="text-[11px] text-slate-400 uppercase tracking-wider font-medium">
-                      Tanggal Tenggat
-                    </div>
-                    <div className="text-sm font-bold text-slate-800">{task.deadline}</div>
-                  </div>
-
-                  <Link
-                    href={`/tasks/${task.id}`}
-                    className="px-4 py-2 text-xs font-semibold rounded-[8px] bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 transition-colors shadow-xs"
-                  >
-                    Buka Detail & Checklist &rarr;
-                  </Link>
-                </div>
+                <h3 className="mt-3.5 text-sm font-bold text-slate-900 group-hover:text-[#0066FF] transition-colors line-clamp-2">
+                  {item.title}
+                </h3>
+                <p className="mt-1 text-xs text-slate-500 line-clamp-1">
+                  {item.courseName}
+                </p>
               </div>
-            </div>
+
+              <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span className="text-slate-500 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                  {item.deadline}
+                </span>
+                <span className="font-semibold text-[#0066FF] inline-flex items-center gap-1">
+                  Buka Tugas
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </span>
+              </div>
+            </Link>
           ))}
         </div>
       )}

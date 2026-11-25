@@ -52,7 +52,7 @@ export function SegmentedControl<T extends string>({
     <div
       role="radiogroup"
       aria-label={ariaLabel}
-      className={`relative inline-flex flex-wrap sm:flex-nowrap items-center p-1 rounded-control border border-line bg-paper gap-1 ${className}`}
+      className={`relative inline-flex flex-wrap items-center p-1 rounded-xl bg-slate-100 gap-1 ${className}`}
     >
       {options.map((opt, idx) => {
         const isSelected = idx === activeIndex;
@@ -68,21 +68,15 @@ export function SegmentedControl<T extends string>({
             tabIndex={isSelected ? 0 : -1}
             onClick={() => onChange(opt.value)}
             onKeyDown={(e) => handleKeyDown(e, idx)}
-            className={`relative z-10 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 min-h-[40px] sm:min-h-[32px] rounded-[4px] text-small font-medium transition-[background-color,color,transform] duration-micro ease-editorial active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 ${
+            className={`relative z-10 flex-auto inline-flex items-center justify-center gap-1.5 px-3 min-h-[40px] sm:min-h-[34px] rounded-lg text-xs font-semibold whitespace-nowrap transition-[background-color,color,transform] duration-micro ease-editorial active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 ${
               isSelected
-                ? "bg-surface text-ink-900 border border-line shadow-float"
-                : "text-ink-500 border border-transparent hover:text-ink-900"
+                ? "bg-[#0066FF] text-white"
+                : "text-slate-600 hover:text-slate-900 hover:bg-white"
             }`}
           >
             <span>{opt.label}</span>
             {opt.count !== undefined && (
-              <span
-                className={`font-mono text-micro ${
-                  isSelected ? "text-accent" : "text-ink-500"
-                }`}
-              >
-                {opt.count}
-              </span>
+              <span className="font-mono">{opt.count}</span>
             )}
           </button>
         );

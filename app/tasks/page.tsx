@@ -1,17 +1,25 @@
 "use client";
 
 import React, { useEffect, useState, Suspense } from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  Plus,
+  Search,
+  CheckCircle2,
+  Pencil,
+  Trash2,
+  ArrowRight,
+} from "lucide-react";
 import { api } from "@/lib/api-client";
 import { Course, TaskWithDetails, TaskPriority, TaskStatus } from "@/types";
-import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
+import { ModalActions } from "@/components/ui/ModalActions";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { DropdownMenuItem } from "@/components/ui/DropdownMenu";
+import { useToast } from "@/components/ui/Toast";
 import { Alert } from "@/components/ui/Alert";
 import { LoadingState } from "@/components/ui/LoadingState";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { ProgressBar } from "@/components/ui/ProgressBar";
+import { TaskBoard } from "@/components/tasks/TaskBoard";
 
 type TaskFormData = {
   courseId: string;
@@ -32,21 +40,21 @@ const initialFormData: TaskFormData = {
 };
 
 function TasksContent() {
+  const router = useRouter();
+  const { showToast } = useToast();
   const searchParams = useSearchParams();
   const initialCourseId = searchParams.get("courseId") || "";
-  const initialStatus = searchParams.get("status") || "";
   const initialPriority = searchParams.get("priority") || "";
 
   const [tasks, setTasks] = useState<TaskWithDetails[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // Filters state
   const [selectedCourseId, setSelectedCourseId] = useState<string>(initialCourseId);
-  const [selectedStatus, setSelectedStatus] = useState<string>(initialStatus);
   const [selectedPriority, setSelectedPriority] = useState<string>(initialPriority);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Form Modal (Add / Edit)
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -67,7 +75,6 @@ function TasksContent() {
         api.getCourses(),
         api.getTasks({
           courseId: selectedCourseId || undefined,
-          status: selectedStatus || undefined,
           priority: selectedPriority || undefined,
         }),
       ]);
@@ -82,14 +89,17 @@ function TasksContent() {
 
   useEffect(() => {
     loadData();
-  }, [selectedCourseId, selectedStatus, selectedPriority]);
+  }, [selectedCourseId, selectedPriority]);
 
-  const openAddModal = () => {
+  const openAddModal = (defaultStatus: TaskStatus = "Todo") => {
     setEditingTask(null);
     setFormData({
       ...initialFormData,
       courseId: selectedCourseId || (courses.length > 0 ? courses[0].id : ""),
-      deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0],
+      status: defaultStatus,
     });
     setFormError(null);
     setIsFormModalOpen(true);
@@ -122,7 +132,7 @@ function TasksContent() {
       return;
     }
     if (!formData.deadline) {
-      setFormError("Deadline tugas wajib diisi");
+      setFormError("Tanggal deadline wajib diisi");
       return;
     }
 
@@ -130,450 +140,305 @@ function TasksContent() {
       setFormSubmitting(true);
       if (editingTask) {
         await api.updateTask(editingTask.id, formData);
-        setSuccessMsg(`Tugas "${formData.title}" berhasil diperbarui.`);
+        showToast({ type: "success", message: "Tugas berhasil diperbarui." });
       } else {
         await api.createTask(formData);
-        setSuccessMsg(`Tugas "${formData.title}" berhasil ditambahkan.`);
+        showToast({
+          type: "success",
+          message: "Tugas baru berhasil ditambahkan.",
+        });
       }
       setIsFormModalOpen(false);
       await loadData();
     } catch (err: any) {
-      setFormError(err.message || "Gagal menyimpan tugas");
+      setFormError(err.message || "Terjadi kesalahan saat menyimpan tugas");
     } finally {
       setFormSubmitting(false);
     }
   };
 
-  const handleDeleteTask = async () => {
+  const handleQuickStatusChange = async (
+    task: TaskWithDetails,
+    newStatus: TaskStatus
+  ) => {
+    if (task.status === newStatus) return;
+    const prevStatus = task.status;
+
+    // Optimistic update so drag-and-drop feels instant
+    setTasks((prev) =>
+      prev.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t))
+    );
+
+    try {
+      await api.updateTask(task.id, { status: newStatus });
+      showToast({
+        type: "success",
+        message: `Status "${task.title}" dipindahkan ke ${newStatus}.`,
+      });
+    } catch (err: any) {
+      // Revert on failure
+      setTasks((prev) =>
+        prev.map((t) => (t.id === task.id ? { ...t, status: prevStatus } : t))
+      );
+      setError(err.message || "Gagal mengubah status tugas");
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
     if (!taskToDelete) return;
     try {
       setIsDeleting(true);
-      setError(null);
       await api.deleteTask(taskToDelete.id);
-      setSuccessMsg(`Tugas "${taskToDelete.title}" beserta seluruh subtugasnya berhasil dihapus.`);
+      showToast({
+        type: "success",
+        message: `Tugas "${taskToDelete.title}" berhasil dihapus.`,
+      });
       setTaskToDelete(null);
       await loadData();
     } catch (err: any) {
       setError(err.message || "Gagal menghapus tugas");
-      setTaskToDelete(null);
     } finally {
       setIsDeleting(false);
     }
   };
 
-  const resetFilters = () => {
-    setSelectedCourseId("");
-    setSelectedStatus("");
-    setSelectedPriority("");
-  };
+  const filteredTasks = tasks.filter((t) => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      t.title.toLowerCase().includes(q) ||
+      t.course?.courseCode.toLowerCase().includes(q) ||
+      t.course?.courseName.toLowerCase().includes(q)
+    );
+  });
+
+  const getMenuItems = (task: TaskWithDetails): DropdownMenuItem[] => [
+    {
+      label: "Lihat Detail",
+      icon: <ArrowRight className="w-3.5 h-3.5" />,
+      onClick: () => router.push(`/tasks/${task.id}`),
+    },
+    {
+      label: "Edit Tugas",
+      icon: <Pencil className="w-3.5 h-3.5" />,
+      onClick: () => openEditModal(task),
+    },
+    ...(["Todo", "In Progress", "Done"] as TaskStatus[])
+      .filter((status) => status !== task.status)
+      .map((status, index) => ({
+        label: `Pindah ke ${status}`,
+        icon: <CheckCircle2 className="w-3.5 h-3.5" />,
+        dividerBefore: index === 0,
+        onClick: () => handleQuickStatusChange(task, status),
+      })),
+    {
+      label: "Hapus Tugas",
+      icon: <Trash2 className="w-3.5 h-3.5" />,
+      variant: "danger",
+      dividerBefore: true,
+      onClick: () => setTaskToDelete(task),
+    },
+  ];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
-      {/* Header Card */}
-      <div className="rounded-[8px] border border-slate-200 bg-white p-5 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="w-2 h-2 rounded-full bg-blue-600" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Daftar Tugas
-            </span>
-          </div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Manajemen Tugas Perkuliahan</h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Kelola target, subtugas checklist, serta evaluasi progres pengerjaan
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={openAddModal}
-          disabled={courses.length === 0}
-          className="px-4 py-2.5 rounded-[8px] bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-50"
-        >
-          <span>+</span>
-          <span>Tambah Tugas Baru</span>
-        </button>
-      </div>
-
-      {courses.length === 0 && !loading && (
-        <Alert
-          type="warning"
-          title="Mata Kuliah Belum Tersedia"
-          message="Silakan buat minimal satu mata kuliah terlebih dahulu sebelum menambahkan tugas perkuliahan."
-        />
-      )}
-
-      {/* Global Alerts */}
-      {successMsg && (
-        <Alert
-          type="success"
-          message={successMsg}
-          onClose={() => setSuccessMsg(null)}
-        />
-      )}
-      {error && (
-        <Alert
-          type="error"
-          title="Perhatian"
-          message={error}
-          onClose={() => setError(null)}
-        />
-      )}
-
-      {/* FILTER BAR CARD */}
-      <div className="rounded-[8px] border border-slate-200 bg-white p-4 space-y-3">
-        <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-          <span>Filter & Pencarian</span>
-          {(selectedCourseId || selectedStatus || selectedPriority) && (
-            <button
-              type="button"
-              onClick={resetFilters}
-              className="text-blue-600 hover:underline text-xs"
-            >
-              Reset Filter
-            </button>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          {/* Filter Course */}
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-500 uppercase mb-1">
-              Mata Kuliah
-            </label>
-            <select
-              value={selectedCourseId}
-              onChange={(e) => setSelectedCourseId(e.target.value)}
-              className="w-full px-3 py-2 rounded-[8px] border border-slate-200 text-xs font-medium bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
-            >
-              <option value="">Semua Mata Kuliah ({courses.length})</option>
-              {courses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.courseCode} - {c.courseName}
-                </option>
-              ))}
-            </select>
+    <div className="space-y-6 animate-fade-up">
+      {/* TOOLBAR / FILTER BAR */}
+      <div className="bg-white rounded-2xl p-4 border border-slate-200/70 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-3 flex-1">
+          <div className="relative flex-1 min-w-[200px] max-w-xs">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Cari judul tugas atau kode MK..."
+              className="w-full pl-10 pr-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] focus:bg-white transition-all"
+            />
           </div>
 
-          {/* Filter Status */}
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-500 uppercase mb-1">
-              Status Tugas
-            </label>
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="w-full px-3 py-2 rounded-[8px] border border-slate-200 text-xs font-medium bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
-            >
-              <option value="">Semua Status</option>
-              <option value="Todo">Todo (Belum Mulai)</option>
-              <option value="In Progress">In Progress (Dikerjakan)</option>
-              <option value="Done">Done (Selesai)</option>
-            </select>
-          </div>
-
-          {/* Filter Priority */}
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-500 uppercase mb-1">
-              Prioritas
-            </label>
-            <select
-              value={selectedPriority}
-              onChange={(e) => setSelectedPriority(e.target.value)}
-              className="w-full px-3 py-2 rounded-[8px] border border-slate-200 text-xs font-medium bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
-            >
-              <option value="">Semua Prioritas</option>
-              <option value="High">Tinggi (High)</option>
-              <option value="Medium">Sedang (Medium)</option>
-              <option value="Low">Rendah (Low)</option>
-            </select>
-          </div>
-
-          {/* Reset Filters button */}
-          <div className="flex items-end">
-            <button
-              type="button"
-              onClick={resetFilters}
-              className="w-full py-2 px-3 rounded-[8px] border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-medium text-slate-600 transition-colors"
-            >
-              Bersihkan Filter
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* TASK LIST CARDS */}
-      {loading ? (
-        <LoadingState message="Memuat daftar tugas..." />
-      ) : tasks.length === 0 ? (
-        <EmptyState
-          title="Tidak ada tugas ditemukan"
-          description={
-            selectedCourseId || selectedStatus || selectedPriority
-              ? "Tidak ada tugas dengan kriteria filter yang Anda pilih. Coba sesuaikan filter."
-              : "Belum ada tugas perkuliahan. Buat tugas baru untuk mulai mencatat target belajar."
-          }
-          actionText={
-            selectedCourseId || selectedStatus || selectedPriority
-              ? "Reset Filter"
-              : "Tambah Tugas Baru"
-          }
-          onAction={
-            selectedCourseId || selectedStatus || selectedPriority
-              ? resetFilters
-              : openAddModal
-          }
-        />
-      ) : (
-        <div className="space-y-3">
-          <div className="flex justify-between items-center px-1 text-xs text-slate-500">
-            <span>Ditemukan {tasks.length} tugas</span>
-            <span>Diurutkan berdasarkan deadline terdekat</span>
-          </div>
-
-          <div className="space-y-3">
-            {tasks.map((task) => (
-              <div
-                key={task.id}
-                className="rounded-[8px] border border-slate-200 bg-white p-5 hover:border-blue-200 transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-5"
-              >
-                {/* Left: Task Info */}
-                <div className="space-y-2 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-[8px] border border-blue-100">
-                      {task.course ? `${task.course.courseCode} • ${task.course.courseName}` : "Mata Kuliah"}
-                    </span>
-                    <Badge
-                      variant={
-                        task.status === "Done"
-                          ? "success"
-                          : task.status === "In Progress"
-                          ? "primary"
-                          : "neutral"
-                      }
-                      size="sm"
-                      dot
-                    >
-                      {task.status}
-                    </Badge>
-                    <Badge
-                      variant={
-                        task.priority === "High"
-                          ? "danger"
-                          : task.priority === "Medium"
-                          ? "warning"
-                          : "neutral"
-                      }
-                      size="sm"
-                    >
-                      {task.priority}
-                    </Badge>
-                  </div>
-
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900 hover:text-blue-600 transition-colors">
-                      <Link href={`/tasks/${task.id}`}>{task.title}</Link>
-                    </h3>
-                    {task.description && (
-                      <p className="text-xs text-slate-500 line-clamp-2 mt-1 leading-relaxed">
-                        {task.description}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 pt-1">
-                    <span>
-                      Tenggat: <strong className="text-slate-800 font-semibold">{task.deadline}</strong>
-                    </span>
-                    <span>•</span>
-                    <span>
-                      Subtugas: {task.completedSubtasks} / {task.totalSubtasks} Selesai
-                    </span>
-                  </div>
-                </div>
-
-                {/* Middle: Progress Bar */}
-                <div className="lg:w-64 space-y-1.5 bg-slate-50/70 p-3.5 rounded-[8px] border border-slate-100">
-                  <div className="text-[11px] font-semibold text-slate-600 flex justify-between">
-                    <span>Progres Pengerjaan</span>
-                    {task.progressPercentage !== null && (
-                      <span className="font-semibold text-blue-600">{task.progressPercentage}%</span>
-                    )}
-                  </div>
-                  <ProgressBar
-                    percentage={task.progressPercentage}
-                    totalSubtasks={task.totalSubtasks}
-                    completedSubtasks={task.completedSubtasks}
-                    showText={false}
-                  />
-                  <div className="text-[11px] text-slate-400">
-                    {task.totalSubtasks === 0
-                      ? "Belum ada subtugas"
-                      : `${task.completedSubtasks} dari ${task.totalSubtasks} checklist selesai`}
-                  </div>
-                </div>
-
-                {/* Right: Actions */}
-                <div className="flex items-center gap-2 shrink-0 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100">
-                  <Link
-                    href={`/tasks/${task.id}`}
-                    className="px-3.5 py-1.5 text-xs font-semibold rounded-[8px] bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-colors"
-                  >
-                    Detail & Checklist
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => openEditModal(task)}
-                    className="px-3 py-1.5 text-xs font-medium rounded-[8px] border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition-colors"
-                  >
-                    Ubah
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTaskToDelete(task)}
-                    className="px-3 py-1.5 text-xs font-medium rounded-[8px] border border-rose-200 bg-rose-50/60 hover:bg-rose-100 text-rose-700 transition-colors"
-                  >
-                    Hapus
-                  </button>
-                </div>
-              </div>
+          <select
+            value={selectedCourseId}
+            onChange={(e) => setSelectedCourseId(e.target.value)}
+            className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200/80 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF]"
+          >
+            <option value="">Semua Mata Kuliah</option>
+            {courses.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.courseCode} — {c.courseName}
+              </option>
             ))}
-          </div>
+          </select>
+
+          <select
+            value={selectedPriority}
+            onChange={(e) => setSelectedPriority(e.target.value)}
+            className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200/80 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF]"
+          >
+            <option value="">Semua Prioritas</option>
+            <option value="High">Prioritas Tinggi</option>
+            <option value="Medium">Prioritas Sedang</option>
+            <option value="Low">Prioritas Rendah</option>
+          </select>
         </div>
+
+        <div className="flex items-center justify-end shrink-0">
+          <button
+            type="button"
+            onClick={() => openAddModal("Todo")}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#0066FF] hover:bg-[#0052CC] text-white text-xs font-semibold transition-all"
+          >
+            <Plus className="w-4 h-4" strokeWidth={2.2} />
+            <span>Tambah Tugas</span>
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <Alert type="error" message={error} onClose={() => setError(null)} />
       )}
 
-      {/* FORM MODAL: ADD / EDIT TASK */}
+      {loading ? (
+        <LoadingState message="Memuat papan tugas perkuliahan..." />
+      ) : (
+        <TaskBoard
+          tasks={filteredTasks}
+          getMenuItems={getMenuItems}
+          onStatusChange={handleQuickStatusChange}
+          onAddTask={openAddModal}
+        />
+      )}
+
+      {/* ADD / EDIT TASK MODAL */}
       <Modal
         isOpen={isFormModalOpen}
         onClose={() => setIsFormModalOpen(false)}
-        title={editingTask ? "Ubah Data Tugas" : "Tambah Tugas Baru"}
-        maxWidth="lg"
+        title={editingTask ? "Edit Tugas" : "Tambah Tugas Baru"}
+        maxWidth="md"
       >
         <form onSubmit={handleSubmitForm} className="space-y-4">
           {formError && <Alert type="error" message={formError} />}
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Mata Kuliah Terkait <span className="text-rose-500">*</span>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Mata Kuliah <span className="text-rose-500">*</span>
             </label>
             <select
-              required
               value={formData.courseId}
-              onChange={(e) => setFormData({ ...formData, courseId: e.target.value })}
-              className="w-full px-3.5 py-2 rounded-[8px] border border-slate-200 text-sm font-medium bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+              onChange={(e) =>
+                setFormData({ ...formData, courseId: e.target.value })
+              }
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF]"
             >
               <option value="">-- Pilih Mata Kuliah --</option>
               {courses.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.courseCode} - {c.courseName}
+                  {c.courseCode} — {c.courseName}
                 </option>
               ))}
             </select>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
               Judul Tugas <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
-              required
-              placeholder="Contoh: Implementasi Route Handlers Next.js"
               value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full px-3.5 py-2 rounded-[8px] border border-slate-200 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+              onChange={(e) =>
+                setFormData({ ...formData, title: e.target.value })
+              }
+              placeholder="Contoh: Implementasi REST API Cloud"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF]"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Deskripsi Tugas (Opsional)
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Deskripsi
             </label>
             <textarea
               rows={3}
-              placeholder="Rincian instruksi atau catatan pengerjaan tugas..."
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-3.5 py-2 rounded-[8px] border border-slate-200 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
+              placeholder="Detail instruksi atau catatan tugas..."
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF]"
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Tenggat Waktu <span className="text-rose-500">*</span>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                Deadline <span className="text-rose-500">*</span>
               </label>
               <input
                 type="date"
-                required
                 value={formData.deadline}
-                onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
-                className="w-full px-3.5 py-2 rounded-[8px] border border-slate-200 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+                onChange={(e) =>
+                  setFormData({ ...formData, deadline: e.target.value })
+                }
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF]"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                 Prioritas
               </label>
               <select
                 value={formData.priority}
                 onChange={(e) =>
-                  setFormData({ ...formData, priority: e.target.value as TaskPriority })
+                  setFormData({
+                    ...formData,
+                    priority: e.target.value as TaskPriority,
+                  })
                 }
-                className="w-full px-3.5 py-2 rounded-[8px] border border-slate-200 text-sm bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF]"
               >
-                <option value="Low">Low (Rendah)</option>
-                <option value="Medium">Medium (Sedang)</option>
-                <option value="High">High (Tinggi)</option>
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Status Tugas
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                Status
               </label>
               <select
                 value={formData.status}
                 onChange={(e) =>
-                  setFormData({ ...formData, status: e.target.value as TaskStatus })
+                  setFormData({
+                    ...formData,
+                    status: e.target.value as TaskStatus,
+                  })
                 }
-                className="w-full px-3.5 py-2 rounded-[8px] border border-slate-200 text-sm bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF]"
               >
-                <option value="Todo">Todo (Belum Mulai)</option>
-                <option value="In Progress">In Progress (Sedang Dikerjakan)</option>
-                <option value="Done">Done (Selesai)</option>
+                <option value="Todo">Todo</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Done">Done</option>
               </select>
             </div>
           </div>
 
-          <div className="flex justify-end gap-2.5 pt-4 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => setIsFormModalOpen(false)}
-              disabled={formSubmitting}
-              className="px-4 py-2 text-xs font-semibold rounded-[8px] border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition-colors"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              disabled={formSubmitting}
-              className="px-4 py-2 text-xs font-semibold rounded-[8px] bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
-            >
-              {formSubmitting ? "Menyimpan..." : editingTask ? "Simpan Perubahan" : "Tambah Tugas"}
-            </button>
-          </div>
+          <ModalActions
+            onCancel={() => setIsFormModalOpen(false)}
+            confirmLabel={editingTask ? "Simpan Perubahan" : "Tambah Tugas"}
+            isLoading={formSubmitting}
+          />
         </form>
       </Modal>
 
-      {/* CONFIRM DELETE MODAL */}
+      {/* DELETE CONFIRM MODAL */}
       <ConfirmModal
         isOpen={!!taskToDelete}
         onClose={() => setTaskToDelete(null)}
-        onConfirm={handleDeleteTask}
+        onConfirm={handleDeleteConfirm}
         title="Hapus Tugas"
-        message={`Apakah Anda yakin ingin menghapus tugas "${taskToDelete?.title}"? Seluruh subtugas yang ada pada tugas ini akan ikut terhapus secara permanen.`}
-        confirmLabel="Ya, Hapus Tugas & Subtugas"
+        message={`Apakah Anda yakin ingin menghapus tugas "${taskToDelete?.title}"? Semua subtugas di dalamnya juga akan dihapus.`}
         isLoading={isDeleting}
       />
     </div>
@@ -582,7 +447,7 @@ function TasksContent() {
 
 export default function TasksPage() {
   return (
-    <Suspense fallback={<LoadingState message="Memuat halaman tugas..." />}>
+    <Suspense fallback={<LoadingState message="Menyiapkan Daftar Tugas..." />}>
       <TasksContent />
     </Suspense>
   );

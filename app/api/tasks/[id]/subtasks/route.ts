@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(
   request: Request,
-  props: { params: Promise<{ id: string }> | { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   try {
     const params = await Promise.resolve(props.params);
@@ -27,7 +27,7 @@ export async function GET(
 
 export async function POST(
   request: Request,
-  props: { params: Promise<{ id: string }> | { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   try {
     const params = await Promise.resolve(props.params);

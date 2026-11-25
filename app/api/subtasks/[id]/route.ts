@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export async function PUT(
   request: Request,
-  props: { params: Promise<{ id: string }> | { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   try {
     const params = await Promise.resolve(props.params);
@@ -33,7 +33,7 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  props: { params: Promise<{ id: string }> | { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   try {
     const params = await Promise.resolve(props.params);
